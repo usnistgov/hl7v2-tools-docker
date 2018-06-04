@@ -1,0 +1,27 @@
+
+version: '3.3'
+services:
+  hl7-auth-db-ui:
+      env_file:
+        - ~/config/hl7-mongo-express/auth-db.env
+
+  hl7-igamt-db-ui:
+      env_file:
+        - ~/config/hl7-mongo-express/igamt-db.env
+
+  hl7-auth-db:
+      env_file:
+          -  ~/config/hl7-auth-db/db.env
+      restart: always
+
+  hl7-auth:
+      env_file:
+          - ~/config/hl7-auth-db/db.env
+
+  hl7-igamt-db:
+      env_file:
+          - ~/config/hl7-igamt-db/db.env
+
+  hl7-igamt:
+      env_file:
+          - ./hl7-igamt-db/config/db.env

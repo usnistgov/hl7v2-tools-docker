@@ -1,0 +1,152 @@
+
+version: '3.3'
+services:
+  hl7-auth-db-ui:
+      image: mongo-express
+      container_name: hl7-auth-db-ui
+      networks:
+        - hl7
+      expose:
+          - "8081"
+      env_file:
+        - ./hl7-mongo-express/config/auth-db.env
+      links:
+        - hl7-auth-db:mongo
+      depends_on:
+        - hl7-auth-db
+      restart: always
+      healthcheck:
+            test: [ "CMD", "curl", "-I", "-f", "http://localhost:8081/" ]
+            interval: 10m
+            retries: 3
+
+  hl7-igamt-db-ui:
+      image: mongo-express
+      container_name: hl7-igamt-db-ui
+      networks:
+        - hl7
+      expose:
+          - "8081"
+      ports:
+          - "10081:8081"
+      env_file:
+        - ./hl7-mongo-express/config/igamt-db.env
+      links:
+        - hl7-igamt-db:mongo
+      depends_on:
+        - hl7-igamt-db
+      restart: always
+      healthcheck:
+            test: [ "CMD", "curl", "-I", "-f", "http://localhost:8081/" ]
+            interval: 10m
+            retries: 3
+
+
+  hl7-auth-db:
+      build: ./hl7-auth-db
+      image: hl7-auth-db
+      networks:
+        - hl7
+      container_name: hl7-auth-db
+      expose:
+            - "27017"
+      healthcheck:
+          test: ["CMD-SHELL", "mongo localhost:27017 --eval db.serverStatus() "]
+          interval: 30s
+          timeout: 30s
+          retries: 3
+      volumes:
+          - ../../data/hl7-auth-db/logs/:/var/log/mongodb/
+          - ../../data/hl7-auth-db/db:/data/db
+          - ../../data/hl7-auth-db/configdb:/data/configdb
+      env_file:
+          - ./hl7-auth-db/config/db.env
+      restart: always
+
+  hl7-auth:
+      build: ./hl7-auth
+      image: hl7-auth
+      networks:
+        - hl7
+      container_name: hl7-auth
+      expose:
+          - "8090"
+      depends_on:
+        - hl7-auth-db
+      env_file:
+          - ./hl7-auth-db/config/db.env
+      links:
+          - hl7-auth-db:hl7-auth-db
+      volumes:
+          - ../../data/hl7-auth/logs/:/var/log/hl7-auth/
+
+  hl7-igamt-db:
+      build: ./hl7-igamt-db
+      image: hl7-igamt-db
+      networks:
+        - hl7
+      container_name: hl7-igamt-db
+      expose:
+            - "27017"
+      healthcheck:
+          test: ["CMD-SHELL", "mongo localhost:27017 --eval db.serverStatus() "]
+          interval: 30s
+          timeout: 30s
+          retries: 3
+      volumes:
+          - ../../data/hl7-igamt-db/logs/:/var/log/mongodb/
+          - ../../data/hl7-igamt-db/db:/data/db
+          - ../../data/hl7-igamt-db/configdb:/data/configdb
+      env_file:
+          - ./hl7-igamt-db/config/db.env
+      restart: always
+
+
+  hl7-igamt:
+      build: ./hl7-igamt
+      image: hl7-igamt
+      networks:
+        - hl7
+      expose:
+          - "8091"
+      ports:
+          - "8091:8091"
+      container_name: hl7-igamt
+      depends_on:
+        - hl7-igamt-db
+        - hl7-auth
+      env_file:
+          - ./hl7-igamt-db/config/db.env
+          - ./hl7-igamt/config/config.env
+      links:
+          - hl7-igamt-db:hl7-igamt-db
+          - hl7-auth:hl7auth
+      volumes:
+          - ../../data/hl7-igamt/logs/:/var/log/hl7-igamt/
+
+
+  hl7-reverse-proxy:
+      build: ./tools-reverse-proxy
+      networks:
+        - hl7
+      image: hl7-reverse-proxy
+      container_name: hl7-reverse-proxy
+      volumes:
+          - ../../data/hl7-reverse-proxy/logs/:/var/log/nginx/
+          - ../../data/hl7-reverse-proxy/html:/usr/share/nginx/html:ro
+      ports:
+          - "80:80"
+          - "443:443"
+      depends_on:
+          - hl7-auth-db-ui
+          - hl7-auth
+          - hl7-igamt-db-ui
+          - hl7-igamt
+      links:
+          - hl7-auth-db-ui:hl7-auth-db-ui
+          - hl7-auth:hl7-auth
+          - hl7-igamt-db-ui:hl7-igamt-db-ui
+          - hl7-igamt:hl7-igamt
+
+networks:
+  hl7:
