@@ -1,0 +1,156 @@
+#
+# Base (Ubuntu) Linux Dockerfile
+#
+# This provides a base image supporting non-java components.  It
+# provides these key software prerequisites:
+#   + mongodb
+#   + nginx web server (with support for HTTPS)
+#
+
+# Base Ubuntu image (https://github.com/dockerfile/ubuntu) provides
+# Ubuntu 16.04 (xenial), as of 07/2017
+# 
+#FROM ubuntu:latest
+FROM ubuntu-base
+
+ENV DEBIAN_FRONTEND noninteractive
+
+# Install common software.
+RUN \
+  sed -i 's/# \(.*multiverse$\)/\1/g' /etc/apt/sources.list && \
+  apt-get update && \
+  apt-get -y upgrade && \
+  apt-get install -y build-essential software-properties-common \
+                     ca-certificates numactl \
+                     python python-pip python-dev \
+                     byobu curl git htop man unzip vim wget &&  \
+  rm -rf /var/lib/apt/lists/*
+
+RUN pip install requests 
+
+# Create the oarop user that runtime systems should run on by default.
+# This user's UID must be set to 1000 to ensure alignment with the oarop
+# user on the host system.  
+#
+RUN sed --in-place -e '/CREATE_MAIL_SPOOL/ s/=yes/=no/' /etc/default/useradd
+ARG opuser=hituser
+ARG opuid=1000
+RUN groupadd --gid $opuid $opuser && \
+    useradd -m --comment "HIT Operations" --shell /bin/bash \
+            --gid $opuid --uid $opuid $opuser
+
+ENV OAR_OP_USER $opuser
+
+### Install Mongo 3.4  #############################################
+#
+# This is adapted from the official Docker Hub mongo Dockerfile 
+# (https://hub.docker.com/_/mongo/) providing version 3.4.7
+# (see mongo.dockerfile).
+#
+
+# grab gosu for easy step-down from root
+ENV GOSU_VERSION 1.7
+RUN set -x \
+	&& wget -O /usr/local/bin/gosu "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$(dpkg --print-architecture)" \
+	&& wget -O /usr/local/bin/gosu.asc "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$(dpkg --print-architecture).asc" \
+	&& export GNUPGHOME="$(mktemp -d)" \
+	&& gpg --keyserver hkp://ha.pool.sks-keyservers.net:80 --recv-keys B42F6819007F00F88E364FD4036A9C25BF357DD4 \
+	&& gpg --batch --verify /usr/local/bin/gosu.asc /usr/local/bin/gosu \
+	&& rm -r "$GNUPGHOME" /usr/local/bin/gosu.asc \
+	&& chmod +x /usr/local/bin/gosu \
+	&& gosu nobody true 
+
+ENV GPG_KEYS \
+# pub   4096R/A15703C6 2016-01-11 [expires: 2018-01-10]
+#       Key fingerprint = 0C49 F373 0359 A145 1858  5931 BC71 1F9B A157 03C6
+# uid                  MongoDB 3.4 Release Signing Key <packaging@mongodb.com>
+	0C49F3730359A14518585931BC711F9BA15703C6
+# https://docs.mongodb.com/manual/tutorial/verify-mongodb-packages/#download-then-import-the-key-file
+RUN set -ex; \
+	export GNUPGHOME="$(mktemp -d)"; \
+	for key in $GPG_KEYS; do \
+          gpg --keyserver hkp://ha.pool.sks-keyservers.net:80 --recv-keys "$key";\
+	done; \
+	gpg --export $GPG_KEYS > /etc/apt/trusted.gpg.d/mongodb.gpg; \
+	rm -r "$GNUPGHOME"; \
+	apt-key list
+
+# Allow build-time overrides (eg. to build image with MongoDB Enterprise version)
+# Options for MONGO_PACKAGE: mongodb-org OR mongodb-enterprise
+# Options for MONGO_REPO: repo.mongodb.org OR repo.mongodb.com
+# Example: docker build --build-arg MONGO_PACKAGE=mongodb-enterprise --build-arg MONGO_REPO=repo.mongodb.com .
+ARG MONGO_PACKAGE=mongodb-org
+ARG MONGO_REPO=repo.mongodb.org
+ENV MONGO_PACKAGE=${MONGO_PACKAGE} MONGO_REPO=${MONGO_REPO}
+
+ENV MONGO_MAJOR 3.4
+ENV MONGO_VERSION 3.4.7
+
+RUN echo "deb http://$MONGO_REPO/apt/ubuntu xenial/${MONGO_PACKAGE%}/$MONGO_MAJOR multiverse" | tee "/etc/apt/sources.list.d/${MONGO_PACKAGE%}.list"
+
+RUN set -x \
+	&& apt-get update \
+	&& apt-get install -y \
+		${MONGO_PACKAGE}=$MONGO_VERSION \
+		${MONGO_PACKAGE}-server=$MONGO_VERSION \
+		${MONGO_PACKAGE}-shell=$MONGO_VERSION \
+		${MONGO_PACKAGE}-mongos=$MONGO_VERSION \
+		${MONGO_PACKAGE}-tools=$MONGO_VERSION \
+	&& rm -rf /var/lib/apt/lists/* \
+	&& rm -rf /var/lib/mongodb \
+	&& mv /etc/mongod.conf /etc/mongod.conf.orig
+
+RUN mkdir -p /data/db && chown -R $opuser:$opuser /data/db
+RUN mkdir -p /var/log/mongodb && chown -R mongodb:mongodb /var/log/mongodb
+RUN chmod -R 777 /var/log/mongodb
+
+RUN mkdir -p /usr/local/mongodb && chown -R mongodb:mongodb /usr/local/mongodb
+RUN chmod -R 777 /usr/local/mongodb
+VOLUME ["/data/db", "/var/log/mongodb"]
+
+#### Install Nginx  #############################################
+##
+#RUN \
+#  gpg --keyserver hkp://keyserver.ubuntu.com:80 \
+#      --recv-keys 8B3981E7A6852F782CC4951600A6F0A3C300EE8C && \
+#  add-apt-repository -y ppa:nginx/stable && \
+#  apt-get update && \
+#  apt-get install -y nginx && \
+#  rm -rf /var/lib/apt/lists/* && \
+#  chown -R www-data:www-data /var/lib/nginx
+#
+## Copy default webpage
+#RUN rm /var/www/html/index.nginx-debian.html && \
+#    rm /etc/nginx/sites-enabled/*
+#COPY html/index.html /var/www/html/index.html
+#COPY html/robots.txt /var/www/html/robots.txt
+#RUN chmod a+r /var/www/html/robots.txt /var/www/html/index.html
+#
+## Copy in CA certs
+#COPY certs/dhparam.pem /etc/ssl/certs/dhparam.pem
+#COPY certs/NISTIssuingCA01.chain.pem /etc/ssl/certs/NISTIssuingCA01.chain.pem
+#COPY certs/OAR-DevOnly-SiteCA.chain.cert.pem /etc/ssl/certs/OAR-DevOnly-SiteCA.chain.pem
+#RUN cat /etc/ssl/certs/NISTIssuingCA01.chain.pem    \
+#        /etc/ssl/certs/OAR-DevOnly-SiteCA.chain.pem \
+#        >> /etc/ssl/certs/dev-test.chain.pem
+#RUN chgrp oarop /etc/ssl/private && chmod g+rx /etc/ssl/private
+#
+#COPY nginx.conf /etc/nginx/nginx.conf
+#RUN chmod a+r /etc/nginx/nginx.conf
+## The child image will copy over the default.conf
+#
+#ARG cachain=dev-test
+#
+#RUN if [ -s /etc/ssl/certs/$cachain.chain.pem ]; then        \
+#     cat /etc/ssl/certs/$cachain.chain.pem >>                \
+#         /etc/ssl/certs/ca-certificates.crt;                 \
+#     cp /etc/ssl/certs/$cachain.chain.pem                    \
+#        /usr/local/share/ca-certificates/$cachain.chain.crt; \
+#     /usr/sbin/update-ca-certificates;                       \
+#     echo Added $cachain.chain.pem as trusted CA;            \
+#    fi
+#
+#ENV REQUESTS_CA_BUNDLE /etc/ssl/certs/ca-certificates.crt
+#
+## Define default command.
+CMD ["bash"]

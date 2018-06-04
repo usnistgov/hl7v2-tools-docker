@@ -1,0 +1,22 @@
+
+version: '3.3'
+services:
+  hl7-reverse-proxy:
+#      hostname: nginx.local.apps
+#      networks:
+#            hl7:
+#              aliases:
+#                - nginx.local.apps
+#      depends_on:
+#          - dns-proxy-server
+
+#  dns-proxy-server:
+#      image: defreitas/dns-proxy-server
+#      container_name: dns-proxy-server
+#      ports:
+#          - "5380:5380"
+#      hostname: dns.mageddo
+#      network_mode: bridge
+#      volumes:
+#          - /var/run/docker.sock:/var/run/docker.sock
+#          - /etc/resolv.conf:/etc/resolv.conf

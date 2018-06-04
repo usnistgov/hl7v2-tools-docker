@@ -1,0 +1,33 @@
+
+version: '3.3'
+services:
+  hl7-auth-db-ui:
+      env_file:
+        - ~/config/hl7-mongo-express/auth-db.env
+
+  hl7-igamt-db-ui:
+      env_file:
+        - ~/config/hl7-mongo-express/igamt-db.env
+
+  hl7-auth-db:
+      env_file:
+          -  ~/config/hl7-auth/db.env
+
+  hl7-auth:
+      build:
+        args:
+          publicKey:  ~/config/hl7-auth/publicKey.txt
+          privateKey: ~/config/hl7-auth/privateKey.txt
+      env_file:
+          - ~/config/hl7-auth-db/db.env
+
+  hl7-igamt-db:
+      env_file:
+          - ~/config/hl7-igamt/db.env
+
+  hl7-igamt:
+      build:
+          args:
+            publicKey:  ~/config/hl7-auth/publicKey.txt
+      env_file:
+          - ~/config/hl7-igamt/db.env
