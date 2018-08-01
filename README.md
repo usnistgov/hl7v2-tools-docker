@@ -10,30 +10,20 @@ This folder contains files related to the Docker artifacts to configure the need
 
 **Deployment** 
 
-**Local** 
-
-1) cp hl7-igamt.war  containers/apps/hl7-igamt/hl7-igamt.war 
-
-2) cp hl7-auth.war  containers/apps/hl7-auth/hl7-auth.war 
-
-3) Update AUTH_HOST's host ip adress in containers/apps/hl7-igamt/config/config.env 
-
-4) Execute ./containers/apps/deploy.sh 
-
-5) Nagivate to 
-- IGAMT: https://localhost/igamt 
-- IGAMT DB: https://localhost/igamt-db 
-- AUTH DB: https://localhost/auth-db 
-
-
-`./containers/apps/deploy.sh 
+**Local**  
+1) Navigate to vagrant folder
+`    cd vagrant 
+2) copy the containers folder to vagrant
+`    cp -r ../containers vagrant 
+3) create data folder under vagrant folder 
+`    mkdir data 
+4) boot up vagrant 
+`    vagrant up
+5) ssh to vagrant 
+`vagrant ssh  
 `
-
-
-**Development** 
-`./containers/apps/deploy-dev.sh 
-`
-
-**Production** 
-`./containers/apps/deploy-prod.sh 
+6) navigate to apps folder under vagrant/containers 
+`cd containers/apps
+`7) start 
+`    ./deploy.sh  
 `
