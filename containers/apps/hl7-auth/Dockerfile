@@ -3,7 +3,7 @@ FROM java-base
 RUN mkdir -p /usr/local/hl7-auth
 RUN mkdir -p /var/log/hl7-auth/
 
-RUN wget  http://hit-2015.nist.gov/wars/hl7-auth.jar -O /usr/local/hl7-auth/hl7-auth.jar
+RUN wget  --no-check-certificate https://hit-2015.nist.gov/wars/hl7-auth.jar -O /usr/local/hl7-auth/hl7-auth.jar
 
 #COPY ./hl7-auth.jar /usr/local/hl7-auth/
 COPY run.sh /usr/local/bin/run-server.sh

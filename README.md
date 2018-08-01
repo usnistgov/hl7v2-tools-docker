@@ -20,22 +20,16 @@ If you do not have vagrant installed locally, Follow these steps:
 ##  Local Install
 1) Navigate to vagrant folder
 `    cd vagrant 
-2) copy the containers folder to vagrant
-`    cp -r ../containers vagrant 
-3) create data folder under vagrant folder 
-    mkdir data 
-
-4) boot up vagrant 
+2) boot up vagrant 
 `    vagrant up
 `
-5) ssh to vagrant 
+3) ssh to vagrant 
 `vagrant ssh  
 `
-6) navigate to apps folder under vagrant/containers 
-`cd containers/apps
+4) Start the containers
+`cd containers/apps`
+`./deploy.sh` 
 
-7) start 
-`    ./deploy.sh  
-` 
+5) On your browser navigate to http://192.168.44.20:8091/
 
 

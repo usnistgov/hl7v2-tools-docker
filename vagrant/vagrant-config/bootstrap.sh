@@ -27,7 +27,3 @@ sudo curl -L https://github.com/docker/compose/releases/download/1.15.0-rc1/dock
 sudo chmod +x /usr/local/bin/docker-compose
 docker-compose --version >> provisioning-log
 
-
-cp -r ../../containers containers
-cp -r ../../containers ../containers
-

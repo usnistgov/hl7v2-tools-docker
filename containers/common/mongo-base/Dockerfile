@@ -4,11 +4,14 @@ FROM ubuntu:xenial
 RUN groupadd -r mongodb && useradd -r -g mongodb mongodb
 
 RUN apt-get update \
+    && apt-get install -y curl unzip vim wget \
 	&& apt-get install -y --no-install-recommends \
 		ca-certificates \
 		jq \
 		numactl \
 	&& rm -rf /var/lib/apt/lists/*
+
+
 
 # grab gosu for easy step-down from root (https://github.com/tianon/gosu/releases)
 ENV GOSU_VERSION 1.10
