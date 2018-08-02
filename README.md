@@ -28,8 +28,13 @@ If you do not have vagrant installed locally, Follow these steps:
 `
 4) Start the containers
 `cd containers/apps`
-`./deploy.sh` 
+`sudo ./deploy.sh` 
 
 5) On your browser navigate to http://192.168.44.20:8091/
 
+
+## Local redeployment (with updates) 
+1- If data have changed: delete the thed data/ folder under vagrant 
+2- cd containers/apps
+3- sudo ./deploy.sh
 
